@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="description" content="" />
+  <meta name="viewport" content="initial-scale=1, maximum-scale=3, minimum-scale=1, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <link rel="stylesheet" type="text/css" href="./css/elementUI.css" />
+  <link rel="stylesheet" type="text/css" href="./css/main.css" />
+  <link rel="stylesheet" type="text/css" href="./css/custom.css" />
+  <script src="./libs/vue.js"></script>
+  <script src="./libs/httpVueLoader.js"></script>
+  <script src="./libs/vue-router.js"></script>
+  <script src="./libs/elementUI.js"></script>
+  <title>AI管理后台</title>
+</head>
+
+<body>
+  <div id="app">
+    <el-container class="w-100 h-100 mh-100">
+      <el-aside width="200px" class="bg-white">
+        <el-menu :default-active="menu_index" :unique-opened="true">
+          <template v-for="(item, index) in menu_list">
+            <el-submenu v-if="item.children" :index="`${index}`" :key="index">
+              <template slot="title">
+                <i :class="item.icon"></i>
+                <span>{{ item.title }}</span>
+              </template>
+              <el-menu-item v-for="(child_item, child_index) in item.children" :index="`${index}-${child_index}`"
+                :key="child_item.view_name" @click="menuClick(child_item.path,`${index}-${child_index}`)">
+                <template slot="title">
+                  <i :class="child_item.icon"></i>
+                  <span>{{ child_item.title }}</span>
+                </template>
+              </el-menu-item>
+            </el-submenu>
+            <el-menu-item v-else :index="`${index}`" :key="index" @click="menuClick(item.path,`${index}`)">
+              <template slot="title">
+                <i :class="item.icon"></i>
+                <span>{{ item.title }}</span>
+              </template></el-menu-item>
+          </template>
+        </el-menu>
+      </el-aside>
+      <el-main>
+        <KeepAlive>
+          <router-view></router-view>
+        </KeepAlive>
+      </el-main>
+    </el-container>
+  </div>
+  <script src="./libs/av-min.js"></script>
+  <script src="./service/lc.js"></script>
+  <script src="./libs/dayjs.min.js"></script>
+  <script src="./libs/mock_data.js"></script>
+  <script>
+    const routes = [
+      { path: '/', component: { template: `<div>一步AI管理后台</div>` } },
+      { path: '/template-page', component: httpVueLoader('./pages/template-page.vue') },
+    ]
+
+    const router = new VueRouter({
+      routes
+    })
+    Vue.use(httpVueLoader)
+    Vue.prototype.$ELEMENT = {
+      size: 'small'
+    }
+
+    Vue.prototype.$toast = (message, type = 'info', duration = 1500) => {
+      Vue.prototype.$message({
+        type,
+        showClose: true,
+        message,
+        duration
+      })
+    }
+
+    Vue.prototype.$alert = (error) => {
+      Vue.prototype.$message({
+        type: 'error',
+        showClose: true,
+        message: error.rawMessage || error.message || error,
+        duration: 1500
+      })
+    }
+
+    Vue.prototype.$mock_data = admin_mock_data
+
+    Vue.prototype.$setQuery = (q, form = {}, query_data = {}) => {
+      for (let key in form) {
+        let value = form[key]
+        if (!util.checkEmptyValue(value)) {
+          if (query_data[key]) q[query_data[key]](key, value)
+          else if (key === 'user_id') { console.log(value); q.equalTo('user', lc.createObject('_User', value)) }
+          else q.equalTo(key, value)
+        }
+      }
+      return q
+    }
+    Vue.directive('copy-text', {
+      bind(el, binding) {
+        el.addEventListener('click', () => {
+          util.copyText(binding.value, () => {
+            Vue.prototype.$toast('复制成功')
+          })
+        })
+      },
+      update(el, binding) {
+        el.setAttribute('data-clipboard-text', binding.value)
+      }
+    })
+    new Vue({
+      el: '#app',
+      name: 'index',
+      router,
+      data: () => ({
+        menu_index: '0',
+        menu_list: [
+          {
+            icon: 'el-icon-setting',
+            title: '默认页面',
+            children: [
+              { icon: 'el-icon-setting', title: '应用中心设置(旧)', path: '/template-page' },
+            ]
+          },
+          { icon: 'el-icon-school', title: '教程中心', path: '/' },
+        ],
+        view_name: '',
+        current_path: ''
+      }),
+      computed: {
+        user() {
+          return lc.currentUser()
+        },
+      },
+      watch: {
+        '$route'(to) {
+          const path = to.path
+          this.current_path = path
+          this.menu_index = this.getMenuIndex(this.menu_list, path)
+        }
+      },
+      created() {
+        if (!this.user) {
+          this.userError()
+        } else {
+          const role_query = new AV.Query(AV.Role)
+          role_query.equalTo('users', this.user)
+          role_query.find().then((roles) => {
+            let role_name_list = roles.map(i => i.get('name'))
+            if (!roles.length || !['admin', 'super_admin'].some(i => role_name_list.includes(i))) {
+              this.userError()
+            } else {
+              console.log('管理后台登录')
+            }
+          }).catch((error) => {
+            // 处理错误
+            this.userError()
+          })
+        }
+      },
+      methods: {
+        userError() {
+          window.location.href = '/'
+        },
+        menuClick(path) {
+          if (this.current_path !== path) this.$router.push(path)
+        },
+        getMenuIndex(list, path) {
+          let menu_index = '0'
+          list.forEach((item, index) => {
+            if (item.children && this.getMenuIndex(item.children, path) > -1) {
+              menu_index = `${index}-${this.getMenuIndex(item.children, path)}`
+            }
+            if (item.path === path) {
+              menu_index = index
+            }
+          })
+          return menu_index
+        }
+      },
+    })
+  </script>
+</body>
+
+</html>
