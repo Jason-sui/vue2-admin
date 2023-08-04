@@ -1,10 +1,3 @@
-<!--
- * @Author: juan.liu
- * @LastEditors: juan.liu
- * @Date: 2021-10-12 09:47:47
- * @LastEditTime: 2022-03-02 11:38:00
- * @FilePath: /as-scrm-manage/components/EditDialogForm/index.vue
--->
 <template>
   <el-dialog :title="title" :visible="visible" v-bind="$attrs" :close-on-click-modal="false" @close="close"
     :center='center' :show-close='showClose'>
