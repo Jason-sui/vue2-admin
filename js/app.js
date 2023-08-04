@@ -56,6 +56,7 @@ new Vue({
     el: '#app',
     name: 'index',
     router,
+    template: "<App/>",
     components: {
         'App': 'url:./App.vue',
     }
