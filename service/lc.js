@@ -1,9 +1,9 @@
 if (!(AV.applicationId && AV.applicationKey)) {
   // 初始化leancloud
   AV.init({
-    appId: "",
-    appKey: "",
-    serverURL: ""
+    appId: "Ys1DlxFwRkXAdqgaeEzCHGjg-gzGzoHsz",
+    appKey: "UFvuBoBjZJ6clB6aEaQ7mtju",
+    serverURL: "https://ys1dlxfw.lc-cn-n1-shared.com"
   })
 }
 

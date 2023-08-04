@@ -68,7 +68,7 @@ module.exports = {
       if (!class_name) return
       this.page_info.page_num = page_num
       this.page_info.limit = limit
-      this.$loading()
+      ui.loading()
       lc.readTotal(class_name, (q) => {
         q = this.$setQuery(q, this.search_form, this.query_data)
         q.limit(limit)
@@ -86,10 +86,10 @@ module.exports = {
         })
         .catch(err => {
           console.log(err)
-          this.$alert(err)
+          ui.alert(err)
         })
         .finally(() => {
-          this.$loading().close()
+          ui.unloading()
         })
     },
     addItem({ type, copy_data }) {
@@ -115,7 +115,7 @@ module.exports = {
             })
             .catch(err => {
               console.log(err)
-              this.$alert(err)
+              ui.alert(err)
             })
           break
       }
@@ -126,11 +126,11 @@ module.exports = {
           lc.update(this.class_name, this.table_data[index].objectId, { [key]: value })
             .then(res => {
               this.pageChange(this.page_info)
-              this.$toast('更改成功,刷新后查看变更')
+              ui.toast('更改成功,刷新后查看变更')
             })
             .catch(err => {
               console.log(err)
-              this.$alert(err)
+              ui.alert(err)
             })
           break
       }
@@ -146,7 +146,7 @@ module.exports = {
                 })
                 .catch(err => {
                   console.log(err)
-                  this.$alert(err)
+                  ui.alert(err)
                 })
               break
           }
