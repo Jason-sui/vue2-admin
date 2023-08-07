@@ -54,9 +54,12 @@ module.exports = {
 
   },
   watch: {
-    '$route.path'(path) {
-      this.current_path = path
-      this.menu_index = this.getMenuIndex(this.menu_list, path)
+    '$route.path': {
+      handler(path) {
+        this.current_path = path
+        this.menu_index = this.getMenuIndex(this.menu_list, path)
+      },
+      immediate: true
     }
   },
   created() {
