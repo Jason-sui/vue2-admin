@@ -9,7 +9,8 @@
         <el-input v-model="input_value" class="markdown-input" type="textarea" :autosize="{ minRows: 5}"></el-input>
       </template>
       <template v-else>
-        <div v-show="!editing&&markdown_content" v-html="markdown_content" class="markdown-container"></div>
+        <div v-show="!editing&&markdown_content" v-copy-text="input_value" v-html="markdown_content"
+          class="markdown-container"></div>
       </template>
     </div>
   </div>
@@ -99,6 +100,7 @@ module.exports = {
       }
       this.md = window.markdownit(defaults)
       this.md.use(window.markdownitTaskLists, { enable: true })
+      this.md.use(window.markdownitEmoji)
       this.md.validateLink = function () { return true }
     },
     renderMermaid() {
