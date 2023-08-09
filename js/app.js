@@ -1,12 +1,11 @@
 "use strict";
 const routes = [
     { path: '/', component: { template: `<div>一步AI管理后台</div>` } },
-    { path: '/template-page', component: httpVueLoader('./pages/template-page.vue') },
+    { path: '/template-page', component: () => importHtmlVue('./pages/template-page.vue') },
 ];
 const router = new VueRouter({
     routes
 });
-Vue.use(httpVueLoader);
 Vue.prototype.$ELEMENT = {
     size: 'small'
 };
@@ -58,6 +57,6 @@ new Vue({
     router,
     template: "<App/>",
     components: {
-        'App': 'url:./App.vue',
+        'App': () => importHtmlVue('./App.vue'),
     }
 });

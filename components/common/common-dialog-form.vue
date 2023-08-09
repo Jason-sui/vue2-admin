@@ -8,7 +8,7 @@
 </template>
 
 <script>
-module.exports = {
+export default  {
   props: {
     form_data: {
       type: Object,

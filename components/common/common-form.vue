@@ -48,7 +48,7 @@
 </template>
 
 <script>
-module.exports = {
+export default  {
   props: {
     data_list: {
       type: Array,

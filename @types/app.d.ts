@@ -1,4 +1,4 @@
-declare const httpVueLoader: any
+declare const importHtmlVue: any
 declare const Vue: any
 declare const VueRouter: any
 declare const admin_mock_data: AdminMockData

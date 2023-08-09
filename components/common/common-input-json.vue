@@ -2,7 +2,7 @@
   <el-input v-model="json_input" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }" @blur="change"></el-input>
 </template>
 <script>
-module.exports = {
+export default  {
   props: {
     value: {
       type: Object,

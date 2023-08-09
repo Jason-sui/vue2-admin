@@ -33,7 +33,7 @@
 </template>
  
 <script>
-module.exports = {
+export default {
   name: "APP",
   data: () => ({
     menu_index: '0',

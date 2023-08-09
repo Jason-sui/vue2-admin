@@ -3,10 +3,10 @@
 </template>
  
 <script>
-module.exports = {
+export default {
   name: "APP",
   components: {
-    'layout': 'url:./components/common/common-admin-layout.vue',
+    'layout': () => importHtmlVue('./components/common/common-admin-layout.vue'),
   }
 }
 </script>

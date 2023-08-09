@@ -58,12 +58,12 @@
   </div>
 </template>
 <script>
-module.exports = {
+export default {
   name: "common-edit",
   components: {
-    'common-upload': 'url:./common-upload.vue',
-    'common-input-json': 'url:./common-input-json.vue',
-    'common-md': 'url:./common-md.vue',
+    'common-upload': () => importHtmlVue('./common-upload.vue'),
+    'common-input-json': () => importHtmlVue('./common-input-json.vue'),
+    'common-md': () => importHtmlVue('./common-md.vue'),
   },
   props: {
     row_key: {

@@ -63,10 +63,10 @@
 </template>
 <script>
 let vm
-module.exports = {
+export default {
   components: {
-    'common-pagination': 'url:./common-pagination.vue',
-    'common-edit': 'url:./common-edit.vue',
+    'common-pagination': () => importHtmlVue('./common-pagination.vue'),
+    'common-edit': () => importHtmlVue('./common-edit.vue'),
   },
   filters: {
     /* 过滤器方法,默认返回指定的值和空字符串 */

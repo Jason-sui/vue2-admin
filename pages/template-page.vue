@@ -23,12 +23,12 @@
 </template>
  
 <script>
-module.exports = {
+export default {
   name: 'template-page',
   components: {
-    'preview': 'url:../components/preview.vue',
-    'common-table': 'url:../components/common/common-table.vue',
-    'common-form': 'url:../components/common/common-form.vue',
+    'preview': () => importHtmlVue('../components/preview.vue'),
+    'common-table': () => importHtmlVue('../components/common/common-table.vue'),
+    'common-form': () => importHtmlVue('../components/common/common-form.vue'),
   },
   data: () => ({
     drawer: false,

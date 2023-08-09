@@ -13,7 +13,7 @@
   </div>
 </template>
 <script>
-module.exports = {
+export default  {
   props: {
     limit: {
       type: Number,
