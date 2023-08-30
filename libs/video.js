@@ -23,15 +23,15 @@ class CustomVideoHandle {
         if (!this.ffmpeg) {
             this.ffmpeg = createFFmpeg({
                 corePath: "./libs/ffmpeg/ffmpeg-core.js",
-                log: true,
+                log: window.is_dev,
             });
         }
         let promise = this.ffmpeg.isLoaded() ? Promise.resolve() : this.ffmpeg.load();
         return promise;
     }
-    convertVideoToFrames(video_path, frame_rate) {
+    convertVideoToFrames({ video_url = '', frame_rate = 8, blob_url = true } = {}) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.video.src = video_path;
+            this.video.src = video_url;
             this.video.controls = true;
             this.video.width = 1024;
             return new Promise((resolve, reject) => {
@@ -40,17 +40,17 @@ class CustomVideoHandle {
                     this.canvas.width = this.video.videoWidth;
                     this.canvas.height = this.video.videoHeight;
                     let index_list = this.splitAndGetTimes(duration, frame_rate);
-                    resolve(this.handleFrames(index_list));
+                    resolve(this.handleFrames(index_list, blob_url));
                 }));
             });
         });
     }
-    handleFrames(index_list) {
+    handleFrames(index_list, blob_url = true) {
         return __awaiter(this, void 0, void 0, function* () {
             for (let frame_time of index_list) {
                 this.video.currentTime = frame_time;
                 yield this.waitForVideoToPlay();
-                this.url_list.push(yield this.captureFrame());
+                this.url_list.push(yield this.captureFrame(blob_url));
             }
             return this.url_list;
         });
@@ -68,7 +68,7 @@ class CustomVideoHandle {
             checkPlaying();
         });
     }
-    captureFrame() {
+    captureFrame(blob_url = true) {
         return __awaiter(this, void 0, void 0, function* () {
             this.context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
             // 获取图像的像素数据
@@ -118,8 +118,7 @@ class CustomVideoHandle {
                 this.canvas.toBlob(blob => resolve(blob), 'image/png');
             });
             if (blob) {
-                const blob_url = URL.createObjectURL(blob);
-                return Promise.resolve(blob_url);
+                return Promise.resolve(blob_url ? URL.createObjectURL(blob) : blob);
             }
             return Promise.reject(new Error('截取失败'));
         });
@@ -132,7 +131,7 @@ class CustomVideoHandle {
         }
         return times;
     }
-    convertImagesToVideo(image_paths = this.url_list, fps = 8, image_type = 'png') {
+    convertImagesToVideo({ image_paths = this.url_list, fps = 8, image_type = 'png', blob_url = true } = {}) {
         let promise_list = image_paths.map(i => fetchFile(i));
         return this.loadFfmpeg()
             .then(() => {
@@ -158,18 +157,18 @@ class CustomVideoHandle {
             return this.ffmpeg.FS('readFile', 'output_video.mp4');
         })
             .then((mp4_data) => {
-            let mp4_url = URL.createObjectURL(new Blob([mp4_data.buffer], { type: 'video/mp4' }));
             image_paths.forEach((_, index) => {
                 this.ffmpeg.FS('unlink', `frame-${index}.${image_type}`);
             });
             this.ffmpeg.FS('unlink', 'output_video.mp4');
-            return mp4_url;
+            let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' });
+            return blob_url ? URL.createObjectURL(blob) : blob;
         })
             .catch((err) => {
             throw err;
         });
     }
-    getVideoVoice(video_url) {
+    getVideoVoice({ video_url = '', blob_url = true } = {}) {
         return this.loadFfmpeg()
             .then(() => {
             return fetchFile(video_url);
@@ -182,17 +181,17 @@ class CustomVideoHandle {
             return this.ffmpeg.FS('readFile', 'output_audio.mp3');
         })
             .then((res) => {
-            let mp3_url = URL.createObjectURL(new Blob([res.buffer], { type: 'audio/mp3' }));
             this.ffmpeg.FS('unlink', 'input.mp4');
             this.ffmpeg.FS('unlink', 'output_audio.mp3');
-            return mp3_url;
+            let blob = new Blob([res.buffer], { type: 'audio/mp3' });
+            return blob_url ? URL.createObjectURL(blob) : blob;
         })
             .catch((err) => {
             console.log(err);
             throw err;
         });
     }
-    addVideoVoice(video_url, voice_url) {
+    addVideoVoice({ video_url = '', voice_url = '', blob_url = true }) {
         return this.loadFfmpeg()
             .then(() => {
             return Promise.all([fetchFile(video_url), fetchFile(voice_url)]);
@@ -208,11 +207,120 @@ class CustomVideoHandle {
             return this.ffmpeg.FS('readFile', 'output.mp4');
         })
             .then((mp4_data) => {
-            let mp4_url = URL.createObjectURL(new Blob([mp4_data.buffer], { type: 'video/mp4' }));
             this.ffmpeg.FS('unlink', 'input.mp4');
             this.ffmpeg.FS('unlink', 'input.mp3');
             this.ffmpeg.FS('unlink', 'output.mp4');
-            return mp4_url;
+            let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' });
+            return blob_url ? URL.createObjectURL(blob) : blob;
+        })
+            .catch((err) => {
+            throw err;
+        });
+    }
+    reverseVideoAndAudio({ video_url = '', blob_url = true }) {
+        console.log('反转视频');
+        return this.loadFfmpeg()
+            .then(() => {
+            return fetchFile(video_url);
+        })
+            .then((video_data) => {
+            return this.ffmpeg.FS('writeFile', 'input.mp4', video_data);
+        })
+            .then(() => {
+            const command = [
+                '-i', 'input.mp4',
+                '-vf', 'reverse',
+                '-af', 'areverse',
+                'output.mp4'
+            ];
+            return this.ffmpeg.run(...command);
+        })
+            .then(() => {
+            return this.ffmpeg.FS('readFile', 'output.mp4');
+        })
+            .then((mp4_data) => {
+            this.ffmpeg.FS('unlink', 'input.mp4');
+            this.ffmpeg.FS('unlink', 'output.mp4');
+            let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' });
+            return blob_url ? URL.createObjectURL(blob) : blob;
+        })
+            .catch((err) => {
+            throw err;
+        });
+    }
+    composeAudioAndImages({ voice_urls = [], image_urls = [], image_type = 'png', blob_url = true }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (voice_urls.length !== image_urls.length) {
+                throw new Error('The number of audio files must match the number of image files.');
+            }
+            let index = 0;
+            let video_list = [];
+            for (let voice_url of voice_urls) {
+                video_list.push(yield this.voiceAddImage({ voice_url, image_url: image_urls[index], image_type }));
+                index++;
+            }
+            try {
+                const video_data_list = yield Promise.all(video_list.map((i) => fetchFile(i)));
+                const write_promises = video_data_list.map((data, index) => {
+                    return this.ffmpeg.FS('writeFile', `input_${index}.mp4`, data);
+                });
+                yield Promise.all(write_promises);
+                const input_args = video_list.map((_, index) => ['-i', `input_${index}.mp4`]).flat();
+                const command = [
+                    ...input_args,
+                    '-filter_complex', `concat=n=${video_list.length}:v=1:a=1 [v] [a]`,
+                    '-map', '[v]',
+                    '-map', '[a]',
+                    '-c:v', 'libx264',
+                    '-c:a', 'aac',
+                    'output.mp4',
+                ];
+                yield this.ffmpeg.run(...command);
+                const mp4_data = yield this.ffmpeg.FS('readFile', 'output.mp4');
+                video_data_list.forEach((_, index) => {
+                    this.ffmpeg.FS('unlink', `input_${index}.mp4`);
+                });
+                this.ffmpeg.FS('unlink', 'output.mp4');
+                const blob = new Blob([mp4_data.buffer], { type: 'video/mp4' });
+                return blob_url ? URL.createObjectURL(blob) : blob;
+            }
+            catch (err) {
+                throw err;
+            }
+        });
+    }
+    voiceAddImage({ voice_url = '', image_url = '', image_type = 'png', blob_url = true }) {
+        return this.loadFfmpeg()
+            .then(() => {
+            return Promise.all([fetchFile(voice_url), fetchFile(image_url)]);
+        })
+            .then((res) => {
+            let [image_data, voice_data] = res;
+            return Promise.all([this.ffmpeg.FS('writeFile', `image.${image_type}`, image_data), this.ffmpeg.FS('writeFile', 'input.mp3', voice_data)]);
+        })
+            .then((res) => {
+            const command = [
+                '-i', `image.${image_type}`,
+                '-i', 'input.mp3',
+                '-c:v', 'libx264',
+                '-tune', 'stillimage',
+                '-c:a', 'aac',
+                '-strict', 'experimental',
+                '-pix_fmt', 'yuv420p',
+                '-q:v', '1',
+                'output.mp4',
+            ];
+            return this.ffmpeg.run(...command);
+        })
+            .then(() => {
+            return this.ffmpeg.FS('readFile', 'output.mp4');
+        })
+            .then((mp4_data) => {
+            this.ffmpeg.FS('unlink', `image.${image_type}`);
+            this.ffmpeg.FS('unlink', 'input.mp3');
+            this.ffmpeg.FS('unlink', 'output.mp4');
+            let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' });
+            return blob_url ? URL.createObjectURL(blob) : blob;
         })
             .catch((err) => {
             throw err;

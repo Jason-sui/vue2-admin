@@ -5,7 +5,7 @@ class CustomVideoHandle {
   private video: HTMLVideoElement
   private canvas: HTMLCanvasElement
   private context: CanvasRenderingContext2D
-  private url_list: string[]
+  private url_list: any[]
   private ffmpeg: any
   constructor() {
     this.video = document.createElement('video')
@@ -21,15 +21,15 @@ class CustomVideoHandle {
     if (!this.ffmpeg) {
       this.ffmpeg = createFFmpeg({
         corePath: "./libs/ffmpeg/ffmpeg-core.js",
-        log: true,
+        log: window.is_dev,
       })
     }
     let promise = this.ffmpeg.isLoaded() ? Promise.resolve() : this.ffmpeg.load()
     return promise
   }
 
-  async convertVideoToFrames(video_path: string, frame_rate: number) {
-    this.video.src = video_path
+  async convertVideoToFrames({ video_url = '' as string, frame_rate = 8 as number, blob_url = true as boolean } = {}) {
+    this.video.src = video_url
     this.video.controls = true
     this.video.width = 1024
     return new Promise((resolve, reject) => {
@@ -38,16 +38,16 @@ class CustomVideoHandle {
         this.canvas.width = this.video.videoWidth
         this.canvas.height = this.video.videoHeight
         let index_list = this.splitAndGetTimes(duration, frame_rate)
-        resolve(this.handleFrames(index_list))
+        resolve(this.handleFrames(index_list, blob_url))
       })
     })
   }
 
-  async handleFrames(index_list: number[]) {
+  async handleFrames(index_list: number[], blob_url: boolean = true) {
     for (let frame_time of index_list) {
       this.video.currentTime = frame_time
       await this.waitForVideoToPlay()
-      this.url_list.push(await this.captureFrame())
+      this.url_list.push(await this.captureFrame(blob_url))
     }
     return this.url_list
   }
@@ -65,7 +65,7 @@ class CustomVideoHandle {
     })
   }
 
-  async captureFrame(): Promise<string> {
+  async captureFrame(blob_url: boolean = true): Promise<string | Blob> {
     this.context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height)
 
     // 获取图像的像素数据
@@ -118,8 +118,7 @@ class CustomVideoHandle {
     })
 
     if (blob) {
-      const blob_url = URL.createObjectURL(blob)
-      return Promise.resolve(blob_url)
+      return Promise.resolve(blob_url ? URL.createObjectURL(blob) : blob)
     }
     return Promise.reject(new Error('截取失败'))
   }
@@ -133,7 +132,7 @@ class CustomVideoHandle {
     return times
   }
 
-  convertImagesToVideo(image_paths: string[] = this.url_list, fps: number = 8, image_type: string = 'png'): Promise<string> {
+  convertImagesToVideo({ image_paths = this.url_list, fps = 8, image_type = 'png', blob_url = true } = {}): Promise<string> {
     let promise_list = image_paths.map(i => fetchFile(i))
     return this.loadFfmpeg()
       .then(() => {
@@ -159,19 +158,19 @@ class CustomVideoHandle {
         return this.ffmpeg.FS('readFile', 'output_video.mp4')
       })
       .then((mp4_data: any) => {
-        let mp4_url = URL.createObjectURL(new Blob([mp4_data.buffer], { type: 'video/mp4' }))
         image_paths.forEach((_, index) => {
           this.ffmpeg.FS('unlink', `frame-${index}.${image_type}`)
         })
         this.ffmpeg.FS('unlink', 'output_video.mp4')
-        return mp4_url
+        let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' })
+        return blob_url ? URL.createObjectURL(blob) : blob
       })
       .catch((err: Error) => {
         throw err
       })
   }
 
-  getVideoVoice(video_url: string) {
+  getVideoVoice({ video_url = '' as string, blob_url = true as boolean } = {}) {
     return this.loadFfmpeg()
       .then(() => {
         return fetchFile(video_url)
@@ -184,10 +183,10 @@ class CustomVideoHandle {
         return this.ffmpeg.FS('readFile', 'output_audio.mp3')
       })
       .then((res: any) => {
-        let mp3_url = URL.createObjectURL(new Blob([res.buffer], { type: 'audio/mp3' }))
         this.ffmpeg.FS('unlink', 'input.mp4')
         this.ffmpeg.FS('unlink', 'output_audio.mp3')
-        return mp3_url
+        let blob = new Blob([res.buffer], { type: 'audio/mp3' })
+        return blob_url ? URL.createObjectURL(blob) : blob
       })
       .catch((err: Error) => {
         console.log(err)
@@ -196,7 +195,7 @@ class CustomVideoHandle {
 
   }
 
-  addVideoVoice(video_url: string, voice_url: string) {
+  addVideoVoice({ video_url = '' as string, voice_url = '' as string, blob_url = true as boolean }) {
     return this.loadFfmpeg()
       .then(() => {
         return Promise.all([fetchFile(video_url), fetchFile(voice_url)])
@@ -212,11 +211,130 @@ class CustomVideoHandle {
         return this.ffmpeg.FS('readFile', 'output.mp4')
       })
       .then((mp4_data: any) => {
-        let mp4_url = URL.createObjectURL(new Blob([mp4_data.buffer], { type: 'video/mp4' }))
         this.ffmpeg.FS('unlink', 'input.mp4')
         this.ffmpeg.FS('unlink', 'input.mp3')
         this.ffmpeg.FS('unlink', 'output.mp4')
-        return mp4_url
+        let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' })
+        return blob_url ? URL.createObjectURL(blob) : blob
+      })
+      .catch((err: Error) => {
+        throw err
+      })
+  }
+
+  reverseVideoAndAudio({ video_url = '' as string, blob_url = true as boolean }): Promise<string | Blob> {
+    console.log('反转视频')
+    return this.loadFfmpeg()
+      .then(() => {
+        return fetchFile(video_url)
+      })
+      .then((video_data: any) => {
+        return this.ffmpeg.FS('writeFile', 'input.mp4', video_data)
+      })
+      .then(() => {
+        const command: string[] = [
+          '-i', 'input.mp4',
+          '-vf', 'reverse',
+          '-af', 'areverse',
+          'output.mp4'
+        ]
+        return this.ffmpeg.run(...command)
+      })
+      .then(() => {
+        return this.ffmpeg.FS('readFile', 'output.mp4')
+      })
+      .then((mp4_data: any) => {
+        this.ffmpeg.FS('unlink', 'input.mp4')
+        this.ffmpeg.FS('unlink', 'output.mp4')
+        let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' })
+        return blob_url ? URL.createObjectURL(blob) : blob
+      })
+      .catch((err: Error) => {
+        throw err
+      })
+  }
+
+  async composeAudioAndImages({ voice_urls = [], image_urls = [], image_type = 'png', blob_url = true }) {
+    if (voice_urls.length !== image_urls.length) {
+      throw new Error('The number of audio files must match the number of image files.')
+    }
+
+    let index = 0
+    let video_list = []
+
+    for (let voice_url of voice_urls) {
+      video_list.push(await this.voiceAddImage({ voice_url, image_url: image_urls[index], image_type }))
+      index++
+    }
+
+    try {
+      const video_data_list = await Promise.all(video_list.map((i: any) => fetchFile(i)))
+
+      const write_promises = video_data_list.map((data: any, index: number) => {
+        return this.ffmpeg.FS('writeFile', `input_${index}.mp4`, data)
+      })
+
+      await Promise.all(write_promises)
+      const input_args = video_list.map((_, index) => ['-i', `input_${index}.mp4`]).flat()
+      const command = [
+        ...input_args,
+        '-filter_complex', `concat=n=${video_list.length}:v=1:a=1 [v] [a]`,
+        '-map', '[v]',
+        '-map', '[a]',
+        '-c:v', 'libx264',
+        '-c:a', 'aac',
+        'output.mp4',
+      ]
+      await this.ffmpeg.run(...command)
+
+      const mp4_data = await this.ffmpeg.FS('readFile', 'output.mp4')
+
+      video_data_list.forEach((_, index) => {
+        this.ffmpeg.FS('unlink', `input_${index}.mp4`)
+      })
+
+      this.ffmpeg.FS('unlink', 'output.mp4')
+
+      const blob = new Blob([mp4_data.buffer], { type: 'video/mp4' })
+      return blob_url ? URL.createObjectURL(blob) : blob
+    } catch (err) {
+      throw err
+    }
+  }
+
+
+  voiceAddImage({ voice_url = '', image_url = '', image_type = 'png', blob_url = true }): Promise<string | Blob> {
+    return this.loadFfmpeg()
+      .then(() => {
+        return Promise.all([fetchFile(voice_url), fetchFile(image_url)])
+      })
+      .then((res: any) => {
+        let [image_data, voice_data] = res
+        return Promise.all([this.ffmpeg.FS('writeFile', `image.${image_type}`, image_data), this.ffmpeg.FS('writeFile', 'input.mp3', voice_data)])
+      })
+      .then((res: any) => {
+        const command = [
+          '-i', `image.${image_type}`,
+          '-i', 'input.mp3',
+          '-c:v', 'libx264',
+          '-tune', 'stillimage',
+          '-c:a', 'aac',
+          '-strict', 'experimental',
+          '-pix_fmt', 'yuv420p',
+          '-q:v', '1',
+          'output.mp4',
+        ]
+        return this.ffmpeg.run(...command)
+      })
+      .then(() => {
+        return this.ffmpeg.FS('readFile', 'output.mp4')
+      })
+      .then((mp4_data: any) => {
+        this.ffmpeg.FS('unlink', `image.${image_type}`)
+        this.ffmpeg.FS('unlink', 'input.mp3')
+        this.ffmpeg.FS('unlink', 'output.mp4')
+        let blob = new Blob([mp4_data.buffer], { type: 'video/mp4' })
+        return blob_url ? URL.createObjectURL(blob) : blob
       })
       .catch((err: Error) => {
         throw err
