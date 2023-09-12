@@ -22,7 +22,7 @@ class CustomVideoHandle {
         // 依赖ffmpeg.wasm WebAssembly
         if (!this.ffmpeg) {
             this.ffmpeg = createFFmpeg({
-                corePath: "./libs/ffmpeg/ffmpeg-core.js",
+                corePath: "/libs/ffmpeg/ffmpeg-core.js",
                 log: window.is_dev,
             });
         }

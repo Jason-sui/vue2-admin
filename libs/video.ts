@@ -20,7 +20,7 @@ class CustomVideoHandle {
     // 依赖ffmpeg.wasm WebAssembly
     if (!this.ffmpeg) {
       this.ffmpeg = createFFmpeg({
-        corePath: "./libs/ffmpeg/ffmpeg-core.js",
+        corePath: "/libs/ffmpeg/ffmpeg-core.js",
         log: window.is_dev,
       })
     }
@@ -258,22 +258,17 @@ class CustomVideoHandle {
     if (voice_urls.length !== image_urls.length) {
       throw new Error('The number of audio files must match the number of image files.')
     }
-
     let index = 0
     let video_list = []
-
     for (let voice_url of voice_urls) {
       video_list.push(await this.voiceAddImage({ voice_url, image_url: image_urls[index], image_type }))
       index++
     }
-
     try {
       const video_data_list = await Promise.all(video_list.map((i: any) => fetchFile(i)))
-
       const write_promises = video_data_list.map((data: any, index: number) => {
         return this.ffmpeg.FS('writeFile', `input_${index}.mp4`, data)
       })
-
       await Promise.all(write_promises)
       const input_args = video_list.map((_, index) => ['-i', `input_${index}.mp4`]).flat()
       const command = [
@@ -286,22 +281,17 @@ class CustomVideoHandle {
         'output.mp4',
       ]
       await this.ffmpeg.run(...command)
-
       const mp4_data = await this.ffmpeg.FS('readFile', 'output.mp4')
-
       video_data_list.forEach((_, index) => {
         this.ffmpeg.FS('unlink', `input_${index}.mp4`)
       })
-
       this.ffmpeg.FS('unlink', 'output.mp4')
-
       const blob = new Blob([mp4_data.buffer], { type: 'video/mp4' })
       return blob_url ? URL.createObjectURL(blob) : blob
     } catch (err) {
       throw err
     }
   }
-
 
   voiceAddImage({ voice_url = '', image_url = '', image_type = 'png', blob_url = true }): Promise<string | Blob> {
     return this.loadFfmpeg()
