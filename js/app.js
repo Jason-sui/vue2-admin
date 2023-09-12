@@ -1,6 +1,6 @@
 "use strict";
 const routes = [
-    { path: '/', component: { template: `<div>一步AI管理后台</div>` } },
+    { path: '/', component: { template: `<div>管理后台</div>` } },
     { path: '/template-page', component: () => importHtmlVue('./pages/template-page.vue') },
 ];
 const router = new VueRouter({

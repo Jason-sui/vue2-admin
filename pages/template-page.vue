@@ -26,9 +26,9 @@
 export default {
   name: 'template-page',
   components: {
-    'preview': () => importHtmlVue('../components/preview.vue'),
-    'common-table': () => importHtmlVue('../components/common/common-table.vue'),
-    'common-form': () => importHtmlVue('../components/common/common-form.vue'),
+    'preview': () => importHtmlVue('/components/preview.vue'),
+    'common-table': () => importHtmlVue('/components/common/common-table.vue'),
+    'common-form': () => importHtmlVue('/components/common/common-form.vue'),
   },
   data: () => ({
     drawer: false,
