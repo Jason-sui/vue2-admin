@@ -7,10 +7,14 @@ class CustomVideoHandle {
   private context: CanvasRenderingContext2D
   private url_list: any[]
   private ffmpeg: any
-  constructor() {
+  constructor(canvas_id = '') {
     this.video = document.createElement('video')
     this.video.crossOrigin = 'anonymous'
-    this.canvas = document.createElement('canvas')
+    if (canvas_id) {
+      this.canvas = document.querySelector(`#${canvas_id}`) as HTMLCanvasElement
+    } else {
+      this.canvas = document.createElement('canvas')
+    }
     this.context = this.canvas.getContext('2d') as CanvasRenderingContext2D
     this.url_list = []
     document.body.appendChild(this.canvas)
@@ -329,5 +333,93 @@ class CustomVideoHandle {
       .catch((err: Error) => {
         throw err
       })
+  }
+
+  async trimVideo({ video_url = '', start_time = 2, end_time = 6, blob_url = true } = {}) {
+    await this.loadFfmpeg()
+    let video_data = await fetchFile(video_url)
+    await this.ffmpeg.FS('writeFile', `input.mp4`, video_data)
+    const output_file_name = 'trimmed_video.mp4'
+    const ffmpeg_command = [
+      '-i', 'input.mp4',
+      '-ss', String(start_time),
+      '-to', String(end_time),
+      '-c:v', 'libx264',
+      '-c:a', 'copy',
+      '-strict', 'experimental',
+      output_file_name,
+    ]
+    await this.ffmpeg.run(...ffmpeg_command)
+    const trimmed_video_data = await this.ffmpeg.FS('readFile', output_file_name)
+    this.ffmpeg.FS('unlink', output_file_name)
+    this.ffmpeg.FS('unlink', 'input.mp4')
+    const trimmed_video_blob = new Blob([trimmed_video_data.buffer], { type: 'video/mp4' })
+    return blob_url ? URL.createObjectURL(trimmed_video_blob) : trimmed_video_blob
+  }
+
+  async cropVideo({ video_url = '', width = 720, height = 720, x = 0, y = 0, blob_url = true } = {}) {
+    await this.loadFfmpeg()
+    let video_data = await fetchFile(video_url)
+    await this.ffmpeg.FS('writeFile', 'input.mp4', video_data)
+
+    const output_file_name = 'cropped_video.mp4'
+    let ffmpeg_command = [
+      '-i', 'input.mp4',
+      '-vf', `crop=${width}:${height}:${x}:${y}`,
+      '-c:v', 'libx264',
+      output_file_name
+    ]
+
+    await this.ffmpeg.run(...ffmpeg_command)
+
+    const cropped_video_data = await this.ffmpeg.FS('readFile', output_file_name)
+    this.ffmpeg.FS('unlink', output_file_name)
+    this.ffmpeg.FS('unlink', 'input.mp4')
+
+    const cropped_video_blob = new Blob([cropped_video_data.buffer], { type: 'video/mp4' })
+    return blob_url ? URL.createObjectURL(cropped_video_blob) : cropped_video_blob
+  }
+
+  async scaleVideo({ video_url = '', width = 720, height = 720, blob_url = true } = {}) {
+    await this.loadFfmpeg()
+    let video_data = await fetchFile(video_url)
+    await this.ffmpeg.FS('writeFile', 'input.mp4', video_data)
+
+    const output_file_name = 'cropped_video.mp4'
+    let ffmpeg_command = [
+      '-i', 'input.mp4',
+      '-vf', `scale=${width}:${height}`,
+      '-c:v', 'libx264',
+      output_file_name
+    ]
+
+    await this.ffmpeg.run(...ffmpeg_command)
+
+    const cropped_video_data = await this.ffmpeg.FS('readFile', output_file_name)
+    this.ffmpeg.FS('unlink', output_file_name)
+    this.ffmpeg.FS('unlink', 'input.mp4')
+
+
+    const cropped_video_blob = new Blob([cropped_video_data.buffer], { type: 'video/mp4' })
+    return blob_url ? URL.createObjectURL(cropped_video_blob) : cropped_video_blob
+  }
+
+  // 运行复合指令处理视频
+  async handleVideoCommand({ video_url = '', blob_url = true, command = [] } = {}) {
+    await this.loadFfmpeg()
+    let video_data = await fetchFile(video_url)
+    await this.ffmpeg.FS('writeFile', 'input.mp4', video_data)
+    const output_file_name = 'handle_video.mp4'
+    let ffmpeg_command = [
+      '-i', 'input.mp4',
+      ...command,
+      output_file_name
+    ]
+    await this.ffmpeg.run(...ffmpeg_command)
+    const handle_video_data = await this.ffmpeg.FS('readFile', output_file_name)
+    this.ffmpeg.FS('unlink', output_file_name)
+    this.ffmpeg.FS('unlink', 'input.mp4')
+    const handle_video_blob = new Blob([handle_video_data.buffer], { type: 'video/mp4' })
+    return blob_url ? URL.createObjectURL(handle_video_blob) : handle_video_blob
   }
 }
