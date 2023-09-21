@@ -21,7 +21,6 @@ class CustomVideoHandle {
         }
         this.context = this.canvas.getContext('2d');
         this.url_list = [];
-        document.body.appendChild(this.canvas);
     }
     loadFfmpeg() {
         // 依赖ffmpeg.wasm WebAssembly
@@ -33,6 +32,19 @@ class CustomVideoHandle {
         }
         let promise = this.ffmpeg.isLoaded() ? Promise.resolve() : this.ffmpeg.load();
         return promise;
+    }
+    getVideoData({ video_url = '' } = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.video.src = video_url;
+            return new Promise((resolve, reject) => {
+                this.video.addEventListener('loadeddata', () => {
+                    const duration = this.video.duration;
+                    const width = this.video.videoWidth;
+                    const height = this.video.videoHeight;
+                    resolve({ duration, width, height });
+                });
+            });
+        });
     }
     convertVideoToFrames({ video_url = '', frame_rate = 8, blob_url = true } = {}) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -392,6 +404,33 @@ class CustomVideoHandle {
             this.ffmpeg.FS('unlink', 'input.mp4');
             const cropped_video_blob = new Blob([cropped_video_data.buffer], { type: 'video/mp4' });
             return blob_url ? URL.createObjectURL(cropped_video_blob) : cropped_video_blob;
+        });
+    }
+    convertVideoToImages({ video_url = '', frame_rate = 8, image_type = 'png', blob_url = true } = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.loadFfmpeg();
+            const video_data = yield fetchFile(video_url);
+            yield this.ffmpeg.FS('writeFile', 'input.mp4', video_data);
+            const output_image_pattern = 'output-%04d.' + image_type;
+            const ffmpeg_command = [
+                '-i', 'input.mp4',
+                '-r', `${frame_rate}`,
+                output_image_pattern,
+            ];
+            yield this.ffmpeg.run(...ffmpeg_command);
+            const image_blob_urls = [];
+            const num_frames = Math.floor(this.video.duration * frame_rate);
+            for (let i = 1; i <= num_frames; i++) {
+                const frame_index = i.toString().padStart(4, '0');
+                const image_file_name = output_image_pattern.replace('%04d', frame_index);
+                const image_data = yield this.ffmpeg.FS('readFile', image_file_name);
+                const image_blob = new Blob([image_data.buffer], { type: `image/${image_type}` });
+                const imageUrl = blob_url ? URL.createObjectURL(image_blob) : image_blob;
+                image_blob_urls.push(imageUrl);
+                this.ffmpeg.FS('unlink', image_file_name);
+            }
+            this.ffmpeg.FS('unlink', 'input.mp4');
+            return image_blob_urls;
         });
     }
     // 运行复合指令处理视频
