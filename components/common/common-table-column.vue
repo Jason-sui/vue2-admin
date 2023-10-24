@@ -66,7 +66,7 @@ let vm
 export default {
   name: 'common-table-column',
   components: {
-    'common-edit': 'url:./common-edit.vue',
+    'common-edit': () => importHtmlVue('./common-edit.vue'),
   },
   filters: {
     /* 过滤器方法,默认返回指定的值和空字符串 */

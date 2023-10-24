@@ -8,7 +8,7 @@
 </template>
 
 <script>
-export default  {
+export default {
   props: {
     form_data: {
       type: Object,
@@ -133,7 +133,9 @@ export default  {
 // height: 36px;
 // font-size: 16px;
 // }
-/deep/ .el-form-item.is-required:not(.is-no-asterisk)>.el-form-item__label:before {
+/deep/
+  .el-form-item.is-required:not(.is-no-asterisk)
+  > .el-form-item__label:before {
   font-weight: 600;
   font-size: 18px;
 }
