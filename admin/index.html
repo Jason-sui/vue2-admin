@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="description" content="" />
+  <meta name="viewport" content="initial-scale=1, maximum-scale=3, minimum-scale=1, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
+  <link rel="stylesheet" type="text/css" href="/admin/css/elementUI.css" />
+  <link rel="stylesheet" type="text/css" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" href="/admin/css/custom.css" />
+  <link rel="stylesheet" type="text/css" href="/admin/css/markdown.css" />
+  <script src="/admin/libs/vue.js"></script>
+  <script src="/admin/libs/httpVueLoader.js"></script>
+  <script src="/admin/libs/vue-router.js"></script>
+  <script src="/admin/libs/elementUI.js"></script>
+  <title>AI管理后台</title>
+</head>
+
+<body class="w-100 h-100 mh-100" style="overflow: hidden;">
+  <div id="app"></div>
+  <script src="/coi-serviceworker.min.js"></script>
+  <script src="/libs/av-min.js"></script>
+  <script src="/libs/lc.js"></script>
+  <script src="/libs/dayjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+  <script src="/libs/markdown-it.min.js"></script>
+  <script src="/admin/libs/mermaid.min.js"></script>
+  <script src="/admin/libs/markdown-it-task-lists.min.js"></script>
+  <script src="/admin/libs/markdown-it-emoji.min.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/admin/libs/mock_data.js"></script>
+  <script src="/admin/libs/router.js"></script>
+  <script src="/admin/libs/filter.js"></script>
+  <script src="/admin/libs/xlsx.full.min.js"></script>
+  <script src="/libs/ffmpeg/ffmpeg.min.js"></script>
+  <script src="/libs/video.js"></script>
+  <script>
+    Vue.use(httpVueLoader)
+    Vue.prototype.$ELEMENT = {
+      size: 'small'
+    }
+
+    Vue.prototype.$toast = (message, type = 'info', duration = 1500) => {
+      Vue.prototype.$message({
+        type,
+        showClose: true,
+        message,
+        duration
+      })
+    }
+
+    Vue.prototype.$alert = (error) => {
+      Vue.prototype.$message({
+        type: 'error',
+        showClose: true,
+        message: error.rawMessage || error.message || error,
+        duration: 1500
+      })
+    }
+
+    Vue.prototype.$config = {
+      master_user_id: '64a506139ae3847a63ced0b7',
+      base_app_id: '64a298ee9ae3847a63cddb48',
+      base_text_action_id: '649a923aaebece3efc9ac2b2',
+      base_text_error_action_id: '6449d250bb00a33ddc417885',
+    }
+
+    Vue.prototype.$setQuery = (q, form = {}, query_data = {}) => {
+      for(let key in form) {
+        let value = form[key]
+        if(!util.checkEmptyValue(value)) {
+          if(query_data[key]) q[query_data[key]](key, value)
+          else if(key === 'user_id') { q.equalTo('user', lc.createObject('_User', value)) }
+          else q.equalTo(key, value)
+        }
+      }
+      return q
+    }
+
+    Vue.prototype.$getListValueKey = ({ value, list, value_key = 'value', label_key = 'label' }) => {
+      let item = list.find(i => i[value_key] === value)
+      return (item && item[label_key]) || value
+    }
+    Vue.prototype.$filter = filter
+    Vue.prototype.$XLSX = XLSX
+    Vue.prototype.$videoHandle = new CustomVideoHandle()
+    Vue.directive('copy-text', {
+      bind(el, binding) {
+        if(!binding.value) el.style.cursor = 'pointer'
+        el.addEventListener('click', () => {
+          util.copyText(binding.value || el.innerText, () => {
+            Vue.prototype.$toast('复制成功')
+          })
+        })
+      }
+    })
+
+    new Vue({
+      el: '#app',
+      name: 'index',
+      router,
+      components: {
+        'App': 'url:./App.vue',
+      },
+      template: `<App/>`
+    })
+  </script>
+</body>
+
+</html>
