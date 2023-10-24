@@ -313,50 +313,6 @@ class Util {
         }
         return new_array;
     }
-    getFuncConfig({ func_name = '', func_key = 'common' } = {}) {
-        if (!this.integration_data_storage[func_name] || !this.integration_data_storage[func_name][func_key]) {
-            return lc.read('KSFunctionConfig', (q) => {
-                q.equalTo('name', func_name);
-                q.equalTo('key', func_key);
-                q.limit(1);
-            })
-                .then(([res]) => {
-                if (!res)
-                    throw '配置获取失败';
-                let data = res.toJSON();
-                if (!this.integration_data_storage[func_name])
-                    this.integration_data_storage[func_name] = {};
-                this.integration_data_storage[func_name][func_key] = data;
-                return data;
-            })
-                .catch((err) => {
-                throw err;
-            });
-        }
-        else {
-            return Promise.resolve(this.integration_data_storage[func_name][func_key]);
-        }
-    }
-    checkFile(file) {
-        return new Promise((resolve, reject) => {
-            let interval = setInterval(() => {
-                lc.run('fileCheck', { id: file.objectId })
-                    .then((res) => {
-                    if (res.data.status) {
-                        clearInterval(interval);
-                        clearTimeout(timer);
-                        let status = res.data.status;
-                        resolve(status);
-                    }
-                });
-            }, 1000);
-            let timer = setTimeout(() => {
-                clearInterval(interval);
-                clearTimeout(timer);
-                reject('查询超时');
-            }, 10000);
-        });
-    }
     checkEmptyValue(value) {
         return [undefined, null, ''].includes(value);
     }
@@ -367,17 +323,6 @@ class Util {
             el.children && res.push(...this.expandList(el.children));
         });
         return res;
-    }
-    // 获取使用次数
-    getCount() {
-        return lc.readItem('KSFunctionHistory', { id: '647ed842aa61440c5e8c0fdc' })
-            .then((res) => {
-            return res.toJSON();
-        })
-            .catch((err) => {
-            console.log(err);
-            throw err;
-        });
     }
 }
 class UI {

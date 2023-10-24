@@ -46,13 +46,15 @@ Vue.prototype.$setQuery = (q: LCQuery, form: { [key: string]: any } = {}, query_
 }
 Vue.directive('copy-text', {
   bind(el: HTMLElement, binding: any) {
+    if (!binding.value) el.style.cursor = 'pointer'
     el.addEventListener('click', () => {
-      util.copyText(binding.value, () => {
+      util.copyText(binding.value || el.innerText, () => {
         Vue.prototype.$toast('复制成功')
       })
     })
   },
 })
+
 new Vue({
   el: '#app',
   name: 'index',
