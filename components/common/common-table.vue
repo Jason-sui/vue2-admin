@@ -227,8 +227,7 @@ export default {
       }
     },
     editItem({ key = '', index = '', value = '', id = '', row }) {
-       let item = this.expandData.find(i => i[this.row_key] === id)
-      let edit_value = value || (item && item[key]) || this.data[index][key]
+      let edit_value = value 
       this.$emit('edit-item', { value: edit_value, key, index, id, row })
     },
   },
